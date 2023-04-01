@@ -1,0 +1,7 @@
+Number of tasks: 6
+Task 1: [0 2 20 0] 
+Task 2: [0 2 40 0] 
+Task 3: [15 10 60 0] 
+Task 4: [15 7 45 0] 
+Task 5: [20 6 35 0] 
+Task 6: [20 5 36 0] 

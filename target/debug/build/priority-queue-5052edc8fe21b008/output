@@ -1,0 +1,2 @@
+cargo:rustc-cfg=has_std
+cargo:rerun-if-changed=/Users/juanrosales/.cargo/registry/src/github.com-1ecc6299db9ec823/priority-queue-1.3.1/build.rs
