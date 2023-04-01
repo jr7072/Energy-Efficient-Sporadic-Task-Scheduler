@@ -473,7 +473,6 @@ fn main(){
     let file_contents: (PriorityQueue<Process, Reverse<u16>>,
                             Option<Vec<f32>>) = load_processes(filename);
     
-
     let mut arrival_queue: PriorityQueue<Process, Reverse<u16>> = file_contents.0;
     let speeds: Option<Vec<f32>> = file_contents.1;
 
