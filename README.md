@@ -28,7 +28,7 @@ The schedular just prints out the results for now you can use standard output in
 ## Setup
 ---
 1. locate the `sts_schedular` executable in `target/release/`
-2. ```./sts_schedular -- <input_file.txt> > <output_file.txt>```
+2. ```./sts_schedular <input_file.txt> > <output_file.txt>```
 3. check results in the output file specified
 
 ## References
