@@ -5,6 +5,7 @@ use std::io::BufRead;
 use std::cmp::Reverse;
 use priority_queue::PriorityQueue;
 
+
 #[derive(Hash, Eq)]
 struct Process{
     task_id: String,
@@ -91,7 +92,7 @@ fn split(input: &String, delimeter: char,
 
 
 fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
-                                            Option<Vec<f32>>) {
+                                                    Option<Vec<f32>>) {
 
     /*
         This function loads the process information from an input file
@@ -453,6 +454,10 @@ fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
                         &mut metadata.last_computation,
                         &mut metadata.context,
                         &time);
+        
+        if edf_queue.is_empty() && arrival_queue.is_empty() && metadata.context == 0{
+            break;
+        }
     }
     
 }
@@ -462,10 +467,13 @@ fn main(){
 
     let arguments: Vec<String> = env::args().collect();
     let filename: &String = &arguments[1];
-    let schedule_length: u16 = 200;
+    
+    let schedule_length: u16 = 201; // per docs time should not exceed 200
 
     let file_contents: (PriorityQueue<Process, Reverse<u16>>,
                             Option<Vec<f32>>) = load_processes(filename);
+    
+
     let mut arrival_queue: PriorityQueue<Process, Reverse<u16>> = file_contents.0;
     let speeds: Option<Vec<f32>> = file_contents.1;
 
