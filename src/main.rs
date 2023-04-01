@@ -119,7 +119,7 @@ fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
             continue;
         }
 
-        let line: String = line.unwrap();
+        let line: String = line.unwrap().trim().to_string();
         let colon_position: usize = line.find(':').expect(": not present");
 
         let argument: &String = &line[0..colon_position].to_string();
@@ -168,7 +168,8 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
                         new_task: &Process, time: &f32,
                         speeds: &Option<Vec<f32>>) -> f32{
     /*
-        Function to calulate utilization formula
+        Function to calulate utilization formula. RC is calculated
+        using c_i + (2 * context)
 
         edf_queue: The current schedular queue being used to schedule
         tasks to the processor
@@ -183,7 +184,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
     let new_task_computation: f32 = f32::from(new_task.computation);
     let new_task_cs: f32 = f32::from(new_task.context_time);
 
-    let mut computation_sum: f32 = new_task_computation + new_task_cs;
+    let mut computation_sum: f32 = new_task_computation + (2.0 * new_task_cs);
                     
     for item in edf_queue{
         
@@ -191,7 +192,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
         let process_computation: f32 = f32::from(process.computation);
         let process_cs: f32 = f32::from(process.context_time);
 
-        let process_computation: f32 = process_computation + process_cs;
+        let process_computation: f32 = process_computation + (2.0 * process_cs);
         computation_sum += process_computation;
     }
 
