@@ -30,7 +30,8 @@ struct SchedularMeta{
 }
 
 
-fn split(input: &String, delimeter: char) -> Vec<u16>{
+fn split(input: &String, delimeter: char,
+                    fixed: bool) -> (Vec<u16>, Vec<f32>){
     /*
         Splits the string representation of the process arguments.
 
@@ -41,7 +42,8 @@ fn split(input: &String, delimeter: char) -> Vec<u16>{
         returns a vector of integer representations for each argument.
     */
 
-    let mut split: Vec<u16> = Vec::new();
+    let mut split_args: Vec<u16> = Vec::new();
+    let mut split_speeds: Vec<f32> = Vec::new();
 
     let mut number: String = "".to_string();
 
@@ -49,25 +51,47 @@ fn split(input: &String, delimeter: char) -> Vec<u16>{
 
         if character == delimeter{
             
-            let numeric: u16 = number.parse::<u16>().unwrap();
-            split.push(numeric);
-            number = "".to_string();
+            if fixed{
 
+                // cleaning up commas
+                let number_len: usize = number.len();
+                let number: String = number[..number_len - 1].
+                                            to_string();
+
+                let numeric: f32 = number.parse::<f32>().unwrap();
+                split_speeds.push(numeric);
+            }
+
+            if !fixed{
+                let numeric: u16 = number.parse::<u16>().unwrap();
+                split_args.push(numeric);
+            }
+
+            number = "".to_string();
+            
             continue;
         }
 
         number.push(character);
     }
 
-    // cast the last argument
-    let numeric: u16 = number.parse::<u16>().unwrap();
-    split.push(numeric);
+    if fixed{
+        let numeric: f32 = number.parse::<f32>().unwrap();
+        split_speeds.push(numeric);
+    }
 
-    return split;
+    if !fixed{
+        let numeric: u16 = number.parse::<u16>().unwrap();
+        split_args.push(numeric);
+    }
+
+    return (split_args, split_speeds);
+
 }
 
 
-fn load_processes(filename: &String) -> PriorityQueue<Process, Reverse<u16>> {
+fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
+                                            Option<Vec<f32>>) {
 
     /*
         This function loads the process information from an input file
@@ -86,9 +110,11 @@ fn load_processes(filename: &String) -> PriorityQueue<Process, Reverse<u16>> {
     let reader: io::BufReader<fs::File> = io::BufReader::new(file);
 
     let mut arrival_queue: PriorityQueue<Process, Reverse<u16>> = PriorityQueue::new();
+    let mut speeds: Option<Vec<f32>> = None;
 
     for (index, line) in reader.lines().enumerate(){
         
+        // don't need this information
         if index == 0{
             continue;
         }
@@ -96,14 +122,26 @@ fn load_processes(filename: &String) -> PriorityQueue<Process, Reverse<u16>> {
         let line: String = line.unwrap();
         let colon_position: usize = line.find(':').expect(": not present");
 
-        let task: &String = &line[0..colon_position].to_string();
-
+        let argument: &String = &line[0..colon_position].to_string();
         let process_arg_start: usize = colon_position + 3;
         let process_arg_end: usize = line.len() - 1;
         let process_args: &String = &line[process_arg_start..process_arg_end].
                                         to_string();
+
+        // check if this is fixed case
+        if *argument == "Possible speeds".to_string(){
+            
+            // remove the last )
+            let process_args_len: usize = process_args.len();
+            let speed_args: &String = &process_args[..process_args_len - 1].
+                                        to_string();
+
+            speeds = Some(split(speed_args, ' ', true).1);
+
+            continue;
+        }
         
-        let arg_list: Vec<u16> = split(process_args, ' ');
+        let arg_list: Vec<u16> = split(process_args, ' ', false).0;
         
         let arrival_time: u16 = arg_list[0];
         let computation_time: u16 = arg_list[1];
@@ -112,7 +150,7 @@ fn load_processes(filename: &String) -> PriorityQueue<Process, Reverse<u16>> {
                                     expect("couldn't case u16 to u8");
 
         let process: Process = Process{
-            task_id: task.to_string(),
+            task_id: argument.to_string(),
             computation: computation_time,
             deadline: deadline,
             context_time: context_time
@@ -121,13 +159,14 @@ fn load_processes(filename: &String) -> PriorityQueue<Process, Reverse<u16>> {
         arrival_queue.push(process, Reverse(arrival_time));
     }
 
-    return arrival_queue;
+    return (arrival_queue, speeds);
 
 }
 
 
 fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>, 
-                        new_task: &Process, time: &f32) -> f32{
+                        new_task: &Process, time: &f32,
+                        speeds: &Option<Vec<f32>>) -> f32{
     /*
         Function to calulate utilization formula
 
@@ -174,6 +213,22 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
 
     }
 
+    // fixed speed utilization
+    if !speeds.is_none(){
+
+        let speed_values: Option<Vec<f32>> = speeds.clone();
+
+        for speed in speed_values.unwrap(){
+
+            if speed > max_uj{
+                max_uj = speed;
+                return max_uj;
+            }
+
+        }
+
+    }
+
     return max_uj;
 
 }
@@ -182,7 +237,8 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
 fn queue_tasks(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
                 time: &u16,
                 current_voltage: &mut f32,
-                edf_queue: &mut PriorityQueue<Process, Reverse<u16>>){
+                edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
+                speeds: &Option<Vec<f32>>){
     /*
         This function looks at any arriving tasks and adds them to the
         edf queue if they pass the utilization test. current voltage will
@@ -212,7 +268,8 @@ fn queue_tasks(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
 
         let utilization_ratio: f32 = utilization(edf_queue,
                                             &arrived_process,
-                                            &f32::from(*time));
+                                            &f32::from(*time),
+                                            speeds);
         
         if utilization_ratio <= 1.0{
     
@@ -291,7 +348,16 @@ fn process_task(edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
 
 fn context_handler(metadata: &mut SchedularMeta,
                         edf_queue: &PriorityQueue<Process, Reverse<u16>>) {
-    
+    /*
+        Handles context time calculation for the schedular
+
+        metadata: The metadata struct that contains information relavent
+        to the schedular
+
+        edf_queue: The current edf queue generated by the schedular
+    */
+
+
     if edf_queue.is_empty(){
         return;
     }
@@ -348,7 +414,8 @@ fn context_handler(metadata: &mut SchedularMeta,
 
 
 fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
-                        schedule_length: u16){
+                        schedule_length: u16,
+                        speeds: Option<Vec<f32>>){
     /*
         This is the sts schedular based on the paper referenced in assignment
         2. Processes are assumed to arrive dynamically even though processes
@@ -376,7 +443,8 @@ fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
 
     for time in 0..schedule_length{
 
-        queue_tasks(arrival_queue, &time, &mut metadata.current_voltage, &mut edf_queue);
+        queue_tasks(arrival_queue, &time, &mut metadata.current_voltage,
+                        &mut edf_queue, &speeds);
         
         context_handler(&mut metadata, &edf_queue);
 
@@ -386,7 +454,6 @@ fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
                         &time);
     }
     
-    
 }
 
 
@@ -394,9 +461,13 @@ fn main(){
 
     let arguments: Vec<String> = env::args().collect();
     let filename: &String = &arguments[1];
+    let schedule_length: u16 = 200;
 
-    let mut arrival_queue: PriorityQueue<Process, Reverse<u16>> = load_processes(filename);
+    let file_contents: (PriorityQueue<Process, Reverse<u16>>,
+                            Option<Vec<f32>>) = load_processes(filename);
+    let mut arrival_queue: PriorityQueue<Process, Reverse<u16>> = file_contents.0;
+    let speeds: Option<Vec<f32>> = file_contents.1;
 
-    start_schedular(&mut arrival_queue, 200);
+    start_schedular(&mut arrival_queue, schedule_length, speeds);
 
 }
