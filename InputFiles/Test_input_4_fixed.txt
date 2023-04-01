@@ -1,7 +1,7 @@
 Number of tasks: 5
 Possible speeds: [0.1, 0.3, 0.5, 0.7, 0.9, 1).
-Task 1: [0 2 20 1] 
-Task 2: [0 2 40 1] 
-Task 3: [5 1 25 1] 
-Task 4: [5 4 23 1] 
+Task 1: [0 2 20 1]
+Task 2: [0 2 40 1]
+Task 3: [5 1 25 1]
+Task 4: [5 4 23 1]
 Task 5: [11 1 28 1]
