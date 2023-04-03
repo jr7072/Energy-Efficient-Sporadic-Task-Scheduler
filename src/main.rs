@@ -4,12 +4,13 @@ use std::io;
 use std::io::BufRead;
 use std::cmp::Reverse;
 use priority_queue::PriorityQueue;
+use ordered_float::OrderedFloat;
 
 
 #[derive(Hash, Eq)]
 struct Process{
     task_id: String,
-    computation: u16,
+    computation: OrderedFloat<f32>,
     deadline: u16,
     context_time: u8,
 }
@@ -24,9 +25,9 @@ impl PartialEq for Process {
 
 struct SchedularMeta{
     last_task: Option<String>, 
-    last_context: Option<u8>,
-    last_computation: Option<u16>,
-    context: u8,
+    last_context: Option<f32>,
+    last_computation: Option<f32>,
+    context: f32,
     current_voltage: f32,
 }
 
@@ -145,7 +146,7 @@ fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
         let arg_list: Vec<u16> = split(process_args, ' ', false).0;
         
         let arrival_time: u16 = arg_list[0];
-        let computation_time: u16 = arg_list[1];
+        let computation_time: OrderedFloat<f32> = OrderedFloat(f32::from(arg_list[1]));
         let deadline: u16 = arg_list[2];
         let context_time: u8 = u8::try_from(arg_list[3]).
                                     expect("couldn't case u16 to u8");
@@ -167,6 +168,7 @@ fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
 
 fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>, 
                         new_task: &Process, time: &f32,
+                        current_voltage: &f32,
                         speeds: &Option<Vec<f32>>) -> f32{
     /*
         Function to calulate utilization formula. RC is calculated
@@ -182,7 +184,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
     */                            
 
     // calculate compuration sum
-    let new_task_computation: f32 = f32::from(new_task.computation);
+    let new_task_computation: f32 = f32::from(new_task.computation / current_voltage).ceil();
     let new_task_cs: f32 = f32::from(new_task.context_time);
 
     let mut computation_sum: f32 = new_task_computation + (2.0 * new_task_cs);
@@ -190,7 +192,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
     for item in edf_queue{
         
         let process: &Process = item.0;
-        let process_computation: f32 = f32::from(process.computation);
+        let process_computation: f32 = f32::from(process.computation / current_voltage).ceil(); // try to get the highest voltage
         let process_cs: f32 = f32::from(process.context_time);
 
         let process_computation: f32 = process_computation + (2.0 * process_cs);
@@ -271,6 +273,7 @@ fn queue_tasks(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
         let utilization_ratio: f32 = utilization(edf_queue,
                                             &arrived_process,
                                             &f32::from(*time),
+                                            current_voltage,
                                             speeds);
         
         if utilization_ratio <= 1.0{
@@ -293,8 +296,8 @@ fn queue_tasks(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
 
 fn process_task(edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
                     current_voltage: &f32,
-                    last_computation: &mut Option<u16>,
-                    context: &mut u8,
+                    last_computation: &mut Option<f32>,
+                    context: &mut f32,
                     time: &u16){
     /*
         process the task that is recommended by the schedular with the
@@ -305,10 +308,15 @@ fn process_task(edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
         current_voltage: The voltage to run the processor at.
     */
 
-    if *context > 0{
+    if *context > 0.0{
         
-        println!("Time {}: Context", time);
-        *context -= 1;
+        println!("Time {}: Context at voltage {}", time, current_voltage);
+        *context -= current_voltage;
+
+        if *context < 0.0{
+            *context = 0.0;
+        }
+
         return;
     }
 
@@ -325,12 +333,12 @@ fn process_task(edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
     println!("Time {}: Running {} at voltage {}", time, task_id, current_voltage);
 
     // update the task and last computation metadata  
-    let new_computation_time:u16 = next_process.computation - 1;
+    let new_computation_time: f32 = next_process.computation.0 - current_voltage;
     *last_computation = Some(new_computation_time);
 
-    if new_computation_time == 0{
+    if new_computation_time < 0.0{
         // add context time at end
-        let context_time: u8 = next_process.context_time;
+        let context_time: f32 = f32::from(next_process.context_time);
         *context += context_time;
         return
     }
@@ -338,7 +346,7 @@ fn process_task(edf_queue: &mut PriorityQueue<Process, Reverse<u16>>,
 
     let process_clone: Process = Process{
         task_id: task_id.clone(),
-        computation: new_computation_time,
+        computation: OrderedFloat(new_computation_time),
         deadline: next_process.deadline,
         context_time: next_process.context_time
     };
@@ -372,9 +380,9 @@ fn context_handler(metadata: &mut SchedularMeta,
         // case 0
         // scheduling first process
         metadata.last_task = Some(task_id.clone());
-        metadata.last_context = Some(process_context);
-        metadata.last_computation = Some(process.computation);
-        metadata.context = process_context;
+        metadata.last_context = Some(f32::from(process_context));
+        metadata.last_computation = Some(process.computation.0);
+        metadata.context = f32::from(process_context);
 
         return;
     };
@@ -385,28 +393,28 @@ fn context_handler(metadata: &mut SchedularMeta,
         // Processes ended or preempted
 
         // task was preempted
-        if metadata.last_computation > Some(0){
+        if metadata.last_computation > Some(0.0){
 
   
             // supply changes that were not caught by processor
-            metadata.context += metadata.last_context.unwrap() + process_context;
+            metadata.context += metadata.last_context.unwrap() + f32::from(process_context);
             
             // update metadata
             metadata.last_task = Some(task_id.clone()); 
-            metadata.last_computation = Some(process.computation);
-            metadata.last_context = Some(process_context);
+            metadata.last_computation = Some(process.computation.0);
+            metadata.last_context = Some(f32::from(process_context));
 
             return;
         }
 
         // previous task was completed just add the new process context
-        if metadata.last_computation == Some(0){
+        if metadata.last_computation == Some(0.0){
             
-            metadata.context += process_context;
+            metadata.context += f32::from(process_context);
 
             metadata.last_task = Some(task_id.clone()); 
-            metadata.last_computation = Some(process.computation);
-            metadata.last_context = Some(process_context);
+            metadata.last_computation = Some(process.computation.0);
+            metadata.last_context = Some(f32::from(process_context));
 
             return
         }
@@ -438,7 +446,7 @@ fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
         last_task: None,
         last_computation: None, 
         last_context: None,
-        context: 0,
+        context: 0.0,
         current_voltage: 1.0 // start with the largest voltage
     };
 
@@ -455,7 +463,7 @@ fn start_schedular(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
                         &mut metadata.context,
                         &time);
         
-        if edf_queue.is_empty() && arrival_queue.is_empty() && metadata.context == 0{
+        if edf_queue.is_empty() && arrival_queue.is_empty() && metadata.context <= 0.0{
             break;
         }
     }
