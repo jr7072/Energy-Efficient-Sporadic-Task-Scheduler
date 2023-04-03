@@ -168,7 +168,6 @@ fn load_processes(filename: &String) -> (PriorityQueue<Process, Reverse<u16>>,
 
 fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>, 
                         new_task: &Process, time: &f32,
-                        current_voltage: &f32,
                         speeds: &Option<Vec<f32>>) -> f32{
     /*
         Function to calulate utilization formula. RC is calculated
@@ -184,7 +183,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
     */                            
 
     // calculate compuration sum
-    let new_task_computation: f32 = f32::from(new_task.computation / current_voltage).ceil();
+    let new_task_computation: f32 = f32::from(new_task.computation).ceil();
     let new_task_cs: f32 = f32::from(new_task.context_time);
 
     let mut computation_sum: f32 = new_task_computation + (2.0 * new_task_cs);
@@ -192,7 +191,7 @@ fn utilization(edf_queue: &PriorityQueue<Process, Reverse<u16>>,
     for item in edf_queue{
         
         let process: &Process = item.0;
-        let process_computation: f32 = f32::from(process.computation / current_voltage).ceil(); // try to get the highest voltage
+        let process_computation: f32 = f32::from(process.computation).ceil(); // try to get the highest voltage
         let process_cs: f32 = f32::from(process.context_time);
 
         let process_computation: f32 = process_computation + (2.0 * process_cs);
@@ -273,7 +272,6 @@ fn queue_tasks(arrival_queue: &mut PriorityQueue<Process, Reverse<u16>>,
         let utilization_ratio: f32 = utilization(edf_queue,
                                             &arrived_process,
                                             &f32::from(*time),
-                                            current_voltage,
                                             speeds);
         
         if utilization_ratio <= 1.0{
