@@ -9,17 +9,6 @@
 - Setup
 - References
 
-
-## Summary
----
-
-This is a sporadic task schedular based on the research paper “On-line scheduling of hard real-time tasks on variable voltage processor,”.
-The paper is aimed at scheduling tasks with variable voltages to save on cpu power consumption for portable devices. What I implemented here
-was that STS algorithm described in the paper. This algorithm uses a utilization ratio to allow or deny new processes that get released. Using the
-max utilization ratio from all the processes we can use that ratio to create a voltage multiple for the cpu saving the need to run the process at full
-power. In this instance of the algorithm I also included context time and I chanched the RS numerator to consider context switching time of the processes.
-The schedular just prints out the results for now you can use standard output in the command line '>' to output the results to any desired file.
-
 ## Technologies
 ---
 - Rust (please excuse the messy code just started learning it a week ago)

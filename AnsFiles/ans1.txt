@@ -1,15 +1,12 @@
-Time 0: Context
-Time 1: Running Task 1 at voltage 0.54545456
+Time 0: Context at voltage 0.54545456
+Time 1: Context at voltage 0.54545456
 Time 2: Running Task 1 at voltage 0.54545456
 Time 3: Running Task 1 at voltage 0.54545456
 Time 4: Running Task 1 at voltage 0.54545456
-Time 5: Context
-Time 6: Context
-Time 7: Context
-Time 8: Running Task 3 at voltage 0.6923077
-Time 9: Running Task 3 at voltage 0.6923077
-Time 10: Running Task 3 at voltage 0.6923077
-Time 11: Running Task 3 at voltage 0.6923077
-Time 12: Running Task 3 at voltage 0.6923077
-Time 13: Context
-Time 14: Context
+Time 5: Running Task 1 at voltage 0.54545456
+Time 6: Running Task 1 at voltage 0.54545456
+Time 7: Running Task 1 at voltage 0.54545456
+Time 8: Running Task 1 at voltage 0.54545456
+Time 9: Running Task 1 at voltage 0.54545456
+Time 10: Context at voltage 0.54545456
+Time 11: Context at voltage 0.54545456

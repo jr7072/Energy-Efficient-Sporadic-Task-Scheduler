@@ -1,0 +1,22 @@
+Time 0: Context at voltage 0.6
+Time 1: Context at voltage 0.6
+Time 2: Context at voltage 0.6
+Time 3: Context at voltage 0.6
+Time 4: Context at voltage 0.6
+Time 5: Context at voltage 0.6
+Time 6: Context at voltage 0.6
+Time 7: Context at voltage 0.6
+Time 8: Context at voltage 0.6
+Time 9: Running Task 1 at voltage 0.6
+Time 10: Running Task 1 at voltage 0.6
+Time 11: Running Task 1 at voltage 0.6
+Time 12: Running Task 1 at voltage 0.6
+Time 13: Context at voltage 0.6
+Time 14: Context at voltage 0.6
+Time 15: Context at voltage 0.6
+Time 16: Context at voltage 0.6
+Time 17: Context at voltage 0.6
+Time 18: Context at voltage 0.6
+Time 19: Context at voltage 0.6
+Time 20: Context at voltage 0.6
+Time 21: Context at voltage 0.6
